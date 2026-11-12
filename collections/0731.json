@@ -1,20 +1,16 @@
 {
   "version": 2,
-  "date": "2026-11-12T08:22:59.984Z",
+  "date": "2026-11-12T08:58:58.301Z",
   "collections": {
     "moonlighter": "正在游玩",
-    "stardewvalley": "计划中",
-    "balatro": "计划中",
+    "balatro": "正在游玩",
     "vampiresurvivors": "计划中",
-    "eurotrucksimulator2": "计划中",
     "terraria": "计划中"
   },
   "keys": [
     "moonlighter",
-    "stardewvalley",
     "balatro",
     "vampiresurvivors",
-    "eurotrucksimulator2",
     "terraria"
   ]
 }
