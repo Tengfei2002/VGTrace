@@ -77,7 +77,7 @@ assert.equal(run('profiles["0425"].dirty'),false);
 run('changeStatus('+target.id+',"正在游玩")');
 const otherBefore=run('JSON.stringify(profiles["0731"].collections)'),fetchBefore=sandbox.fetch;let releaseRead,fetchCount=0;
 sandbox.fetch=async()=>{fetchCount++;return new Promise(resolve=>{releaseRead=resolve;});};
-const reading=elements.get('cloud-read').onclick();assert.equal(elements.get('cloud-read').disabled,true);assert.equal(elements.get('cloud-read')['aria-busy'],'true');assert.ok(elements.get('cloud-status').textContent.includes('正在读取 0425'));
+const reading=elements.get('cloud-read').onclick();await Promise.resolve();await Promise.resolve();assert.equal(elements.get('cloud-read').disabled,true);assert.equal(elements.get('cloud-read')['aria-busy'],'true');assert.ok(elements.get('cloud-status').textContent.includes('正在读取 0425'));
 const background=run("readProfile('0425')");assert.equal(fetchCount,1);releaseRead(await fetchBefore());await Promise.all([reading,background]);sandbox.fetch=fetchBefore;
 assert.ok(elements.get('conflict-dialog').open);assert.equal(elements.get('cloud-read').disabled,false);assert.ok(elements.get('conflict-text').textContent.includes('本机'));assert.equal(run('collections['+JSON.stringify(target.key)+']'),'正在游玩');
 const snapshotCount=[...values.keys()].filter(k=>k.startsWith('vgtrace-snapshot-0425-')).length;
@@ -96,5 +96,5 @@ await elements.get('cloud-read').onclick();elements.get('conflict-remote').oncli
 const ownBefore=run('JSON.stringify(collections)');remote['0731'].sha='8'.repeat(40);remote['0731'].backup.collections={[target.key]:'计划中'};
 run('viewedProfile="0731";setPage("favorites")');await elements.get('cloud-read').onclick();assert.equal(elements.get('conflict-dialog').open,false);assert.ok(names().includes(target.key));assert.equal(run('JSON.stringify(collections)'),ownBefore);assert.ok(elements.get('toast').textContent.includes('0731'));assert.equal(run('JSON.stringify(profiles["0731"].collections)'),otherBefore);
 // Failure is visible, releases the button and preserves both users' data.
-run('viewedProfile=activeProfile;setPage("explore")');sandbox.fetch=async()=>{throw new TypeError('offline');};await elements.get('cloud-read').onclick();assert.equal(elements.get('cloud-read').disabled,false);assert.equal(elements.get('cloud-read')['aria-busy'],'false');assert.ok(elements.get('cloud-status').textContent.includes('无法读取'));assert.equal(run('JSON.stringify(collections)'),ownBefore);assert.equal(run('JSON.stringify(profiles["0731"].collections)'),otherBefore);
+run('viewedProfile=activeProfile;setPage("explore")');sandbox.fetch=async()=>{throw new TypeError('offline');};await elements.get('cloud-read').onclick();assert.equal(elements.get('cloud-read').disabled,false);assert.equal(elements.get('cloud-read')['aria-busy'],'false');assert.ok(elements.get('cloud-status').textContent.includes('无法连接'));assert.equal(run('JSON.stringify(collections)'),ownBefore);assert.equal(run('JSON.stringify(profiles["0731"].collections)'),otherBefore);
 });

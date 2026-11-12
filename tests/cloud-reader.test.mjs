@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {collectionSnapshot} from '../scripts/collection-snapshot.mjs';
 import {execFileSync} from 'node:child_process';
-const sandbox={AbortSignal};for(const name of ['collections-core.js','collections-cloud.js'])vm.runInNewContext(fs.readFileSync(new URL('../src/'+name,import.meta.url),'utf8'),sandbox);
+const sandbox={setTimeout,clearTimeout};for(const name of ['collections-core.js','collections-cloud.js'])vm.runInNewContext(fs.readFileSync(new URL('../src/'+name,import.meta.url),'utf8'),sandbox);
 const factory=sandbox.VGTraceCloud,C=sandbox.VGTraceCollections;
 const data=()=>({version:1,profiles:{'0731':{sha:'a'.repeat(40),backup:C.backup({one:'正在游玩'},'2026-11-12T00:00:00Z')},'0425':{sha:'b'.repeat(40),backup:C.backup({},'2026-11-12T00:00:00Z')}}});
 test('Pages reads coalesce simultaneous users and cache clicks without using REST',async()=>{
@@ -30,4 +30,19 @@ test('invalid or unavailable snapshots are rejected and existing local drafts su
 });
 test('published snapshot pins the actual collections branch and exact Git blob hashes',()=>{
  const snapshot=collectionSnapshot();for(const uid of C.users){const object=snapshot.commit+':collections/'+uid+'.json';assert.equal(snapshot.profiles[uid].sha,execFileSync('git',['rev-parse',object],{encoding:'utf8'}).trim());assert.deepEqual(snapshot.profiles[uid].backup,JSON.parse(execFileSync('git',['show',object],{encoding:'utf8'})));}
+});
+
+test('ordinary network failure can be retried manually immediately; automatic retries back off',async()=>{
+ let calls=0;const reader=factory.create({fetch:()=>{if(++calls===1)throw new TypeError('fetch failed');return Promise.resolve({ok:true,json:async()=>data()});}});
+ await assert.rejects(reader.read('0731'),/请求失败/);await assert.rejects(reader.read('0731'));assert.equal(calls,1);const result=await reader.read('0731',{force:true});assert.equal(result.backup.collections.one,'正在游玩');assert.equal(calls,2);
+});
+test('Android without AbortSignal.timeout can read, time out and recover without a sticky promise',async()=>{
+ let calls=0;const reader=factory.create({timeoutMs:15,fetch:()=>++calls===1?new Promise(()=>{}):Promise.resolve({ok:true,json:async()=>data()})});
+ await assert.rejects(reader.read('0731'),/超时/);const result=await reader.read('0731',{force:true});assert.equal(result.sha,'a'.repeat(40));assert.equal(calls,2);
+});
+test('the timeout also bounds a stalled JSON response body',async()=>{
+ const reader=factory.create({timeoutMs:15,fetch:async()=>({ok:true,json:()=>new Promise(()=>{})})});await assert.rejects(reader.read('0731'),/超时/);
+});
+test('HTTP and invalid JSON errors retain their actual cause instead of a generic network warning',async()=>{
+ for(const [response,pattern] of [[{ok:false,status:503},/HTTP 503/],[{ok:true,json:async()=>{throw new SyntaxError('invalid');}},/有效 JSON/]]){const reader=factory.create({fetch:async()=>response});await assert.rejects(reader.read('0731'),pattern);}
 });
