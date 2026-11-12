@@ -10,6 +10,7 @@
  function persist(storage,uid,p){storage.setItem('vgtrace-profile-'+uid+'-v1',JSON.stringify(p));}
  function legacy(storage){const old=storage.getItem('next-game-atlas-collections-v2'),v1=storage.getItem('next-game-atlas-favorites-v1');if(!storage.getItem('vgtrace-legacy-snapshot-v1')&&(old||v1))storage.setItem('vgtrace-legacy-snapshot-v1',JSON.stringify({date:new Date().toISOString(),v2:old,v1}));let result={};try{result=clean(JSON.parse(old||'{}'));}catch{}try{for(const key of JSON.parse(v1||'[]'))if(typeof key==='string'&&!result[key])Object.assign(result,clean({[key]:'未游玩'}));}catch{}return result;}
  function reconcile(p,remote,sha){const value=parseBackup(remote);const saved=p.pending&&p.pending.backup.date===remote.date&&same(p.pending.backup.collections,value);if(saved){p.sha=sha;p.base=value;p.pending=null;p.dirty=!same(p.collections,value);p.error='';}
+  else if(same(p.collections,value)){p.base=value;p.sha=sha;p.dirty=false;p.error='';}
   else if(!p.dirty&&!p.pending){p.collections=value;p.base=value;p.sha=sha;p.dirty=false;p.error='';}
   else if(!p.sha&&p.dirty&&!p.pending){const m=merge(p.base,p.collections,value);if(!m.conflicts.length){p.collections=m.collections;p.base=value;p.sha=sha;p.dirty=!same(p.collections,value);p.error='';}else p.error='本机原有收藏与云端有冲突；请点击读取云端处理。';}
   else if(p.sha!==sha){p.error='云端有新版本，本机修改已保留；保存会直接替换当前用户，也可读取云端合并。';}

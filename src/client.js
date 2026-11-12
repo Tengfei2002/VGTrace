@@ -4,6 +4,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const STATES=['已通关','正在游玩','计划中','未游玩','已弃坑'],storageKey='next-game-atlas-favorites-v1',collectionKey='next-game-atlas-collections-v2';
 const CollectionCore=globalThis.VGTraceCollections;
 let activeProfile=null,viewedProfile=null,pendingSwitch=null,pendingConflict=null,pollTimer,pollCount=0;
+const cloudReadState={},cloudReadTasks={},cloudReadAt={};
 let collections={},favorites=new Set(),storageOK=true,legacyCollections={};
 let profileStorage;try{profileStorage=localStorage;}catch{storageOK=false;const memory=new Map();profileStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v)};}
 const profiles=Object.fromEntries(CollectionCore.users.map(uid=>[uid,CollectionCore.read(profileStorage,uid)]));

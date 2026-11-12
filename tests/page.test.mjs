@@ -69,4 +69,32 @@ run('setView("table")');assert.ok(elements.get('results').innerHTML.includes('<t
 run('setPage("explore");resetFilters()');elements.get('search').value='和睦森林';run('applyFilters();exportCSV()');assert.ok((await downloads.at(-1).blob.text()).includes('和睦森林'));
 run('resetFilters();setPage("adult");setView("table")');assert.equal(names().length,201);for(const word of ['扮演谁','具体怎么玩','成人内容体现'])assert.ok(elements.get('results').innerHTML.includes(word));
 await elements.get('copy-maintenance').onclick();assert.equal(copied,db.meta.maintenancePrompt);elements.get('download-maintenance').onclick();assert.equal((await downloads.at(-1).blob.text()).replace(/^\ufeff/,''),copied);
+// Regression: a local-only edit with the SAME cloud SHA must still offer choices.
+run('setPage("explore")');
+remote['0425']={sha:'f'.repeat(40),backup:{version:2,date:'2026-11-12T02:00:00Z',collections:{[target.key]:'已通关',[second.key]:'计划中'},keys:[target.key,second.key]}};
+await run("readProfile('0425',true)");if(elements.get('conflict-dialog').open)elements.get('conflict-remote').onclick();
+assert.equal(run('profiles["0425"].dirty'),false);
+run('changeStatus('+target.id+',"正在游玩")');
+const otherBefore=run('JSON.stringify(profiles["0731"].collections)'),fetchBefore=sandbox.fetch;let releaseRead,fetchCount=0;
+sandbox.fetch=async()=>{fetchCount++;return new Promise(resolve=>{releaseRead=resolve;});};
+const reading=elements.get('cloud-read').onclick();assert.equal(elements.get('cloud-read').disabled,true);assert.equal(elements.get('cloud-read')['aria-busy'],'true');assert.ok(elements.get('cloud-status').textContent.includes('正在读取 0425'));
+const background=run("readProfile('0425')");assert.equal(fetchCount,1);releaseRead(await fetchBefore());await Promise.all([reading,background]);sandbox.fetch=fetchBefore;
+assert.ok(elements.get('conflict-dialog').open);assert.equal(elements.get('cloud-read').disabled,false);assert.ok(elements.get('conflict-text').textContent.includes('本机'));assert.equal(run('collections['+JSON.stringify(target.key)+']'),'正在游玩');
+const snapshotCount=[...values.keys()].filter(k=>k.startsWith('vgtrace-snapshot-0425-')).length;
+elements.get('conflict-remote').onclick();assert.equal(run('collections['+JSON.stringify(target.key)+']'),'已通关');assert.equal(run('profiles["0425"].dirty'),false);assert.ok([...values.keys()].filter(k=>k.startsWith('vgtrace-snapshot-0425-')).length>snapshotCount);
+await elements.get('cloud-read').onclick();assert.equal(elements.get('conflict-dialog').open,false);assert.ok(elements.get('toast').textContent.includes('一致'));assert.ok(elements.get('cloud-status').textContent.includes('最近读取'));
+// Keep-local preserves the complete draft, while merge imports remote additions.
+run('changeStatus('+target.id+',"正在游玩")');const localDraft=run('JSON.stringify(collections)');await elements.get('cloud-read').onclick();assert.ok(elements.get('conflict-dialog').open);elements.get('conflict-local').onclick();assert.equal(run('JSON.stringify(collections)'),localDraft);assert.equal(run('profiles["0425"].dirty'),true);
+await elements.get('cloud-read').onclick();elements.get('conflict-dialog').listeners.cancel();assert.equal(run('pendingConflict'),null);assert.equal(run('JSON.stringify(collections)'),localDraft);
+remote['0425'].sha='9'.repeat(40);remote['0425'].backup.collections[target.key]='已弃坑';remote['0425'].backup.collections.stardewvalley='未游玩';
+await elements.get('cloud-read').onclick();elements.get('conflict-merge').onclick();assert.equal(run('collections['+JSON.stringify(target.key)+']'),'正在游玩');assert.equal(run('collections.stardewvalley'),'未游玩');assert.equal(run('profiles["0425"].dirty'),true);
+// A pending save must not suppress the prompt. Cancel is non-destructive.
+await run('requestSave()');elements.get('save-request-close').onclick();const pendingDraft=run('JSON.stringify(collections)'),pendingId=run('profiles["0425"].pending.requestId');
+await elements.get('cloud-read').onclick();assert.ok(elements.get('conflict-dialog').open);assert.ok(elements.get('conflict-text').textContent.includes('不会撤销'));elements.get('conflict-cancel').onclick();assert.equal(run('JSON.stringify(collections)'),pendingDraft);assert.equal(run('profiles["0425"].pending.requestId'),pendingId);
+await elements.get('cloud-read').onclick();elements.get('conflict-remote').onclick();assert.equal(run('profiles["0425"].pending'),null);assert.equal(run('profiles["0425"].dirty'),false);assert.equal(run('profiles["0425"].collections['+JSON.stringify(target.key)+']'),'已弃坑');assert.equal(run('JSON.stringify(profiles["0731"].collections)'),otherBefore);
+// Reading while viewing the peer refreshes the peer, without altering our draft.
+const ownBefore=run('JSON.stringify(collections)');remote['0731'].sha='8'.repeat(40);remote['0731'].backup.collections={[target.key]:'计划中'};
+run('viewedProfile="0731";setPage("favorites")');await elements.get('cloud-read').onclick();assert.equal(elements.get('conflict-dialog').open,false);assert.ok(names().includes(target.key));assert.equal(run('JSON.stringify(collections)'),ownBefore);assert.ok(elements.get('toast').textContent.includes('0731'));assert.equal(run('JSON.stringify(profiles["0731"].collections)'),otherBefore);
+// Failure is visible, releases the button and preserves both users' data.
+run('viewedProfile=activeProfile;setPage("explore")');sandbox.fetch=async()=>{throw new TypeError('offline');};await elements.get('cloud-read').onclick();assert.equal(elements.get('cloud-read').disabled,false);assert.equal(elements.get('cloud-read')['aria-busy'],'false');assert.ok(elements.get('cloud-status').textContent.includes('无法读取'));assert.equal(run('JSON.stringify(collections)'),ownBefore);assert.equal(run('JSON.stringify(profiles["0731"].collections)'),otherBefore);
 });

@@ -73,3 +73,8 @@ test('repair queue retries only authorized user requests, in submission order',a
  f.args.github.paginate=async()=>[issue(6),other,issue(5)];f.args.github.rest.issues.listForRepo=async()=>{};f.args.github.rest.issues.get=async x=>{numbers.push(x.issue_number);return {data:issue(x.issue_number)};};f.args.core={warning:x=>logs.push(x),info:x=>logs.push(x)};
  await processQueue(f.args);assert.deepEqual(numbers,[5,6]);assert.equal(f.calls.closed.length,2);assert.equal(f.calls.writes.length,2);
 });
+
+test('equal cloud contents clear an obsolete dirty flag without inventing save confirmation',()=>{
+ const p=C.profile();p.base={a:'未游玩'};p.collections={a:'已通关'};p.dirty=true;p.sha=oldSha;const r=C.reconcile(p,C.backup({a:'已通关'}),newSha);assert.equal(p.dirty,false);assert.equal(p.sha,newSha);assert.ok(!r.saved);
+ p.pending={backup:C.backup(p.collections,'2026-11-12T01:00:00Z')};C.reconcile(p,C.backup(p.collections,'2026-11-12T00:00:00Z'),newSha);assert.ok(p.pending);assert.equal(p.dirty,false);
+});
