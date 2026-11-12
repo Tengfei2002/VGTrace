@@ -1,1 +1,12 @@
-{"name":"vgtrace","version":"1.0.0","private":true,"type":"module","description":"VGTrace — Video Game Trace，多平台游戏图鉴","scripts":{"build":"node scripts/build.mjs","check":"node scripts/check.mjs"}}
+{
+  "name": "vgtrace",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "VGTrace — Video Game Trace，多平台游戏图鉴",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node --test tests/*.test.mjs"
+  }
+}

@@ -8,11 +8,31 @@ A searchable multi-platform video game atlas with curated recommendations, playt
 
 - 按名称、玩法、平台代际、厂商、体验预算与游玩模式搜索和组合筛选。
 - 卡片／表格切换、随机推荐、CSV 导出、逐款介绍与来源说明。
-- 已通关、正在游玩、计划中、未游玩、已弃坑五种收藏状态，支持 JSON 备份和恢复。
+- 0731、0425 两个独立收藏档案，各有已通关、正在游玩、计划中、未游玩、已弃坑五种状态；可只读查看对方。
+- GitHub Actions 云端保存、跨设备读取，支持原格式 JSON 上传与下载。
 - 成人向专区独立保留题材、玩法和非露骨内容说明，不由年龄分级或单一标签自动归组。
 - 网页底部可复制的维护提示词直接引导更新本 GitHub 仓库，并检查 Actions 发布结果。
 
-收藏保存在当前浏览器。换设备或从原离线文件迁移时，请先备份收藏，再在新网站恢复；GitHub Pages 不自动同步个人收藏。
+## 收藏使用方式
+
+1. 每次打开选择 **0731** 或 **0425**，自动读取该用户云端收藏；顶栏随时切换。用户编号是收藏档案选择，不是身份认证。
+2. 修改先保存到所选用户的浏览器缓存。点击 **保存到云端 → 前往 GitHub 确认**，在已预填的 Issue 页面点击 Submit new issue／Create。Actions 保存成功后网页会检查结果，也可点击 **读取云端**。打开确认页本身不算保存成功。
+3. 保存需要登录仓库所有者或协作者的 GitHub 账号。若另一人用自己的账号保存，所有者需在仓库 Settings → Collaborators 添加其账号并接受邀请；仅查看不需要登录。选择 0731／0425 不会改变 GitHub 写入权限，协作者可主动选择任一档案。
+4. 在收藏页点击用户标签查看双方五类收藏；对方视图只读。切换当前用户时，如有未上传修改，会询问先保存，或保留本机修改后切换。
+5. **上传收藏 JSON** 位于 **导出结果** 左侧。上传与下载沿用原 `{version:2,date,collections,keys}` 格式，也接受 version 1 的 keys 数组并归入未游玩。上传合并到当前用户，同一游戏采用导入状态；之后点击保存才会写入云端。收藏较多时确认链接改用 JSON 附件，按弹窗提示把下载的原格式文件拖入 Issue，待上传完成后提交。
+
+当前公开仓库使用标准 Linux Actions runner，按 [GitHub 的公开仓库计费规则](https://docs.github.com/en/billing/concepts/product-billing/github-actions) 免费，无需额外部署服务、购买域名或配置个人访问令牌。两位用户的收藏文件及同步 Issue 都是公开信息。
+
+### 存储与防覆盖
+
+- 云端唯一数据位置为 **collections 分支**的 `collections/0731.json` 和 `collections/0425.json`；main 中同名空文件仅作初始结构示例，不代表最新收藏。每次保存只改当前用户文件，Git 提交历史保留旧版本，不触发图鉴重新构建。
+- `.github/workflows/save-collections.yml` 接收 Issue 事件，由 `.github/scripts/save-collections.cjs` 验证作者、用户、数据格式及文件 SHA 后更新。需要默认分支保留此工作流，以及仓库允许 Actions 运行；工作流显式申请 contents／issues 写权限，不需要新增 Secret。
+- 页面读取公开 GitHub API，无需登录。网络异常或读取额度暂时受限时保留本机修改；未确认写入不会显示“已同步”。恢复网络后可手动读取。
+- 云端版本有变化时保留本机草稿，手动读取会合并互不冲突的修改；同一游戏状态冲突时由用户选择。云端写入也校验原 SHA，防止旧设备直接覆盖新版本。
+- 旧本机键 `next-game-atlas-favorites-v1`、`next-game-atlas-collections-v2` 不覆盖。首次读取时留原始快照 `vgtrace-legacy-snapshot-v1`，经确认只导入一个用户。导入或处理冲突前另留本机快照；这些快照仍依赖该浏览器存储，应另下载 JSON 备份。
+- 两套缓存分别使用 `vgtrace-profile-0731-v1`、`vgtrace-profile-0425-v1`。已发起但未确认的保存请求也保留在各自缓存；停止本机等待不会撤销已在 GitHub 提交的 Issue。
+
+旧离线文件与 GitHub Pages 属于不同浏览器来源，网站不能直接读取离线文件收藏。请在旧页面下载收藏 JSON，再在新网站选择用户上传；不要清理旧浏览器数据，直到确认备份和云端保存成功。
 
 ## 网站与首次启用
 
@@ -27,6 +47,7 @@ A searchable multi-platform video game atlas with curated recommendations, playt
 ```sh
 npm run build
 npm run check
+npm test
 ```
 
 - `data/manifest.json`：有序游戏分片清单与总数。
@@ -34,11 +55,16 @@ npm run check
 - `data/meta.json`：统计、待办和解析后的维护提示词。
 - `src/maintenance-prompt.txt`：维护提示词模板，构建时同步数量、日期、覆盖率和待办。
 - `src/template.html`、`src/client.js`：页面与交互源码。
+- `src/collections-core.js`、`src/collections-ui.js`：收藏格式、合并及双用户云端交互。
+- `.github/workflows/save-collections.yml`、`.github/scripts/save-collections.cjs`：云端保存流程。
+- `tests/`：收藏隔离、迁移、上传下载、冲突、保存权限和页面交互验证。
 - `src/bootstrap.js`：带错误重试的分片加载器，兼容 `/VGTrace/` 子路径。
 - `dist/`：构建产生的网站，部署时上传。
 - `offline/VGTrace.html`：构建同时保留的离线单文件产物，不提交至仓库。
 
 修改游戏资料后同步 manifest、meta 统计和相应来源日期，运行构建与检查，再提交并推送 main。发布检查必须对应本次提交，不将仅生成本地文件视为线上更新。
+
+日常图鉴维护不得重建、重置或强推 collections 分支；不要用 main 的初始空文件覆盖实际收藏。首次启用仅在该分支不存在时创建；后续收藏交给保存工作流维护。
 
 ## 资料口径
 

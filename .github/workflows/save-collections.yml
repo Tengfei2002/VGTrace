@@ -1,0 +1,21 @@
+name: Save collections
+on:
+  issues:
+    types: [opened, edited, reopened]
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: vgtrace-collections-${{ github.event.issue.number }}
+  cancel-in-progress: false
+jobs:
+  save:
+    if: startsWith(github.event.issue.title, 'VGTrace 收藏同步 · ')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const save = require('./.github/scripts/save-collections.cjs');
+            await save({github, context, core});
