@@ -1,1 +1,38 @@
-{"version":2,"date":"2026-11-12T00:00:00.000Z","collections":{},"keys":[]}
+{
+  "version": 2,
+  "date": "2026-11-12T09:01:49.458Z",
+  "collections": {
+    "moonlighter": "正在游玩",
+    "thelastcampfire": "计划中",
+    "animalcrossingnewhorizons": "正在游玩",
+    "thelegendofzeldabreathofthewild": "正在游玩",
+    "thelegendofzeldatearsofthekingdom": "正在游玩",
+    "thelegendofzeldaechoesofwisdom": "未游玩",
+    "davethediver": "正在游玩",
+    "brotato": "正在游玩",
+    "everafterfalls": "正在游玩",
+    "figment2creedvalley": "计划中",
+    "figment": "计划中",
+    "spiritfarerfarewell": "正在游玩",
+    "trombonechamp": "正在游玩",
+    "pixelcafe": "正在游玩",
+    "cozygrove": "正在游玩"
+  },
+  "keys": [
+    "moonlighter",
+    "thelastcampfire",
+    "animalcrossingnewhorizons",
+    "thelegendofzeldabreathofthewild",
+    "thelegendofzeldatearsofthekingdom",
+    "thelegendofzeldaechoesofwisdom",
+    "davethediver",
+    "brotato",
+    "everafterfalls",
+    "figment2creedvalley",
+    "figment",
+    "spiritfarerfarewell",
+    "trombonechamp",
+    "pixelcafe",
+    "cozygrove"
+  ]
+}
