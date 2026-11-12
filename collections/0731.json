@@ -1,1 +1,10 @@
-{"version":2,"date":"2026-11-12T00:00:00.000Z","collections":{},"keys":[]}
+{
+  "version": 2,
+  "date": "2026-11-12T06:03:00.285Z",
+  "collections": {
+    "moonlighter": "正在游玩"
+  },
+  "keys": [
+    "moonlighter"
+  ]
+}
