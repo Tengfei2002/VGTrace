@@ -9,7 +9,7 @@ A searchable multi-platform video game atlas with curated recommendations, playt
 - 按名称、玩法、平台代际、厂商、体验预算与游玩模式搜索和组合筛选。
 - 卡片／表格切换、随机推荐、CSV 导出、逐款介绍与来源说明。
 - 0731、0425 两个独立收藏档案，各有已通关、正在游玩、计划中、未游玩、已弃坑五种状态；可只读查看对方。
-- GitHub Actions 云端保存、跨设备读取，支持原格式 JSON 上传与下载。
+- GitHub Actions 云端保存、跨设备读取，支持原格式 JSON 上传与下载，以及 CSV 收藏导入。
 - 成人向专区独立保留题材、玩法和非露骨内容说明，不由年龄分级或单一标签自动归组。
 - 网页底部可复制的维护提示词直接引导更新本 GitHub 仓库，并检查 Actions 发布结果。
 
@@ -19,7 +19,7 @@ A searchable multi-platform video game atlas with curated recommendations, playt
 2. 修改先保存到所选用户的浏览器缓存。点击 **保存到云端 → 前往 GitHub 确认**，在已预填的 Issue 页面点击 Submit new issue／Create。Actions 保存成功后网页会检查结果，也可点击 **读取云端**。打开确认页本身不算保存成功。
 3. 保存需要登录仓库所有者或协作者的 GitHub 账号。若另一人用自己的账号保存，所有者需在仓库 Settings → Collaborators 添加其账号并接受邀请；仅查看不需要登录。选择 0731／0425 不会改变 GitHub 写入权限，协作者可主动选择任一档案。
 4. 在收藏页点击用户标签查看双方五类收藏；对方视图只读。切换当前用户时，如有未上传修改，会询问先保存，或保留本机修改后切换。
-5. **上传收藏 JSON** 位于 **导出结果** 左侧。上传与下载沿用原 `{version:2,date,collections,keys}` 格式，也接受 version 1 的 keys 数组并归入未游玩。上传合并到当前用户，同一游戏采用导入状态；之后点击保存才会写入云端。收藏较多时确认链接改用 JSON 附件，按弹窗提示把下载的原格式文件拖入 Issue，待上传完成后提交。
+5. **上传收藏 CSV / JSON** 位于 **导出结果** 左侧。上传与下载沿用原 `{version:2,date,collections,keys}` 格式，也接受 version 1 的 keys 数组并归入未游玩。CSV 可使用“导出结果”生成的文件，在“收藏夹”列填写五种状态；也支持“收藏状态”列。新导出包含游戏标识与Steam AppID，旧导出按编号匹配，只有名称时采用唯一的已有名称精确匹配。空状态跳过、不删除原收藏，未匹配或重名条目会报告并跳过，异常状态、不同状态的重复游戏会拒绝整个文件。推荐使用 UTF-8 CSV（Excel 中选择 CSV UTF-8）。上传合并到当前用户，同一游戏采用导入状态；之后点击保存才会写入云端。收藏较多时确认链接改用 JSON 附件，按弹窗提示把下载的原格式文件拖入 Issue，待上传完成后提交。
 
 当前公开仓库使用标准 Linux Actions runner，按 [GitHub 的公开仓库计费规则](https://docs.github.com/en/billing/concepts/product-billing/github-actions) 免费，无需额外部署服务、购买域名或配置个人访问令牌。两位用户的收藏文件及同步 Issue 都是公开信息。
 

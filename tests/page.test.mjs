@@ -5,7 +5,7 @@ import test from 'node:test';
 import {randomUUID} from 'node:crypto';
 const manifest=JSON.parse(fs.readFileSync('data/manifest.json','utf8')),db={meta:JSON.parse(fs.readFileSync('data/meta.json','utf8')),games:manifest.chunks.flatMap(p=>JSON.parse(fs.readFileSync('data/'+p,'utf8')))};
 const html=fs.readFileSync('src/template.html','utf8');
-const client=['collections-core.js','client.js','collections-ui.js'].map(p=>fs.readFileSync('src/'+p,'utf8')).join('\n');
+const client=['collections-core.js','collections-import.js','client.js','collections-ui.js'].map(p=>fs.readFileSync('src/'+p,'utf8')).join('\n');
 test('page interactions: independent profiles, migration, read-only peer, upload, save confirmation and existing tools',async()=>{
 const elements=new Map(),all=[];
 class Element{
@@ -30,6 +30,7 @@ const remote={};for(const uid of ['0731','0425'])remote[uid]={sha:(uid==='0731'?
 const sandbox={document,localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},navigator:{clipboard:{writeText:async v=>{copied=v;}}},location:{hash:''},history:{replaceState(){}},window:{scrollTo(){},addEventListener(){}},setTimeout:()=>1,clearTimeout(){},Blob,URL:{createObjectURL:blob=>{const url='blob:test-'+blobs.size;blobs.set(url,blob);return url;},revokeObjectURL(){}},console,crypto:{randomUUID},TextDecoder,atob,AbortSignal,confirm:()=>true,fetch:async url=>{const uid=url.includes('0731.json')?'0731':'0425',r=remote[uid];return {ok:true,json:async()=>({sha:r.sha,encoding:'base64',content:Buffer.from(JSON.stringify(r.backup)).toString('base64')})};}};
 vm.createContext(sandbox);vm.runInContext(client,sandbox,{timeout:20000});
 const run=s=>vm.runInContext(s,sandbox,{timeout:20000}),game=id=>db.games.find(g=>g.appid===id),names=()=>JSON.parse(run('JSON.stringify(filtered.map(g=>g.key))'));
+assert.ok(html.match(/id="upload-collections"[^>]*>[^<]*CSV/));assert.ok(elements.get('import-file').accept.includes('.csv'));
 assert.ok(elements.get('profile-dialog').open);assert.equal(run('activeProfile'),null);
 await run("chooseProfile('0731');readProfile('0731')");elements.get('legacy-import').onclick();assert.equal(run('collections.stardewvalley'),'未游玩');assert.equal(values.get('vgtrace-legacy-claimed-by'),'0731');assert.equal(values.get('next-game-atlas-favorites-v1'),'["stardewvalley"]');assert.ok(values.get('vgtrace-legacy-snapshot-v1'));
 const target=game(4115450),second=game(4348910);run('resetFilters()');
@@ -46,6 +47,19 @@ elements.get('save-request-close').onclick();assert.equal(elements.get('cloud-sa
 run('changeStatus('+second.id+',"正在游玩")');remote['0425'].backup=request.backup;remote['0425'].sha='d'.repeat(40);await run("readProfile('0425')");assert.equal(run('profiles["0425"].pending'),null);assert.ok(run('profiles["0425"].dirty'));assert.equal(run('collections['+JSON.stringify(second.key)+']'),'正在游玩');
 // A conflicting read must block save until a merge decision.
 remote['0425'].backup={...request.backup,collections:{...request.backup.collections,[second.key]:'已弃坑'}};remote['0425'].sha='e'.repeat(40);await run("readProfile('0425',true)");assert.ok(elements.get('conflict-dialog').open);assert.equal(await run('requestSave()'),false);elements.get('conflict-local').onclick();assert.equal(run('collections['+JSON.stringify(second.key)+']'),'正在游玩');assert.ok([...values.keys()].some(k=>k.startsWith('vgtrace-snapshot-0425-')));
+// Import an actual current CSV export into only the active user's collections.
+run('setPage("favorites");viewedProfile=activeProfile;resetFilters();exportCSV()');
+const csvFile=await downloads.at(-1).blob.text();assert.ok(csvFile.includes('游戏标识'));assert.ok(csvFile.includes('Steam AppID'));
+run('changeStatus('+target.id+',"计划中")');
+await elements.get('import-file').onchange({target:{files:[{name:'VGTrace.csv',text:async()=>csvFile}]}});
+assert.equal(run('collections['+JSON.stringify(target.key)+']'),'已通关');assert.equal(run('profiles["0731"].collections['+JSON.stringify(target.key)+']'),'已弃坑');
+// A bad CSV must leave the entire local state unchanged.
+const beforeCSV=run('JSON.stringify(collections)');
+await elements.get('import-file').onchange({target:{files:[{name:'bad.csv',text:async()=> '游戏标识,收藏夹\n'+target.key+',无效状态'}]}});
+assert.equal(run('JSON.stringify(collections)'),beforeCSV);
+await elements.get('import-file').onchange({target:{files:[{name:'empty.csv',text:async()=> '游戏标识,收藏夹\n'+target.key+','}]}});
+assert.equal(run('JSON.stringify(collections)'),beforeCSV);
+run('setPage("explore")');
 // Existing discovery, table, adult descriptions and maintenance exports still work.
 for(const id of [4115450,4348910,3219030,3265700,1478500]){run('resetFilters()');elements.get('search').value=id===1478500?'和睦森林':game(id).zh;run('applyFilters()');assert.ok(names().includes(game(id).key));}
 run('resetFilters()');for(const [id,value] of Object.entries({genre:'模拟经营',platform:'Steam',duration:'long',developer:'Questing Goose'}))elements.get(id).value=value;run('applyFilters()');assert.deepEqual(names(),[second.key]);

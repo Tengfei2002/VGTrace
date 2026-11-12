@@ -7,7 +7,7 @@ const manifest=JSON.parse(fs.readFileSync('data/manifest.json','utf8'));
 const db={meta:JSON.parse(fs.readFileSync('data/meta.json','utf8')),games:manifest.chunks.flatMap(p=>JSON.parse(fs.readFileSync('data/'+p,'utf8')))};
 if(db.games.length!==manifest.count||db.meta.count!==manifest.count)throw Error('Game count mismatch');
 let template=fs.readFileSync('src/template.html','utf8').replaceAll('{{CATALOG_DATE}}',db.meta.generated).replaceAll('{{CATALOG_MONTH}}',db.meta.generated.slice(0,7).replace('-','.')).replaceAll('{{CATALOG_COUNT}}',db.meta.count.toLocaleString('zh-CN'));
-const client=fs.readFileSync('src/collections-core.js','utf8')+'\n'+fs.readFileSync('src/client.js','utf8')+'\n'+fs.readFileSync('src/collections-ui.js','utf8');
+const client=fs.readFileSync('src/collections-core.js','utf8')+'\n'+fs.readFileSync('src/collections-import.js','utf8')+'\n'+fs.readFileSync('src/client.js','utf8')+'\n'+fs.readFileSync('src/collections-ui.js','utf8');
 fs.mkdirSync('dist',{recursive:true});fs.mkdirSync('offline',{recursive:true});
 fs.cpSync('data','dist/data',{recursive:true});fs.cpSync('assets','dist/assets',{recursive:true});fs.copyFileSync('src/bootstrap.js','dist/bootstrap.js');
 const offline=template.replaceAll('__BRAND_ICON_DATA__','data:image/png;base64,'+fs.readFileSync('assets/icon.png').toString('base64')).replace('/*__DATA__*/',JSON.stringify(db).replaceAll('<','\\u003c')).replace('/*__CLIENT__*/',client);
