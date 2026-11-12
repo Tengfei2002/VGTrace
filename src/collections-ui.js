@@ -6,21 +6,16 @@ function profileRefresh(){
  $('choose-profile').textContent=activeProfile?'用户 '+activeProfile+' ▾':'选择用户 ▾';
  $('cloud-save').disabled=!activeProfile;$('cloud-save').textContent=p?.pending?'查看保存请求':'保存到云端';
  $('cloud-read').disabled=!activeProfile;$('upload-collections').disabled=!activeProfile;
- $('cloud-status').textContent=!p?'选择 0731 或 0425，载入独立收藏夹':p.pending?(p.error?'保存请求待确认 · '+p.error+' 可查看请求并停止本机等待后重试':'保存请求待确认 · 在GitHub提交后自动检查'):p.error||(!p.loaded?'正在读取云端…':p.dirty?'有未保存到云端的修改':'已与云端同步');
+ $('cloud-status').textContent=!p?'选择 0731 或 0425，载入独立收藏夹':p.pending?(p.error?'保存请求待确认 · '+p.error+' 可查看请求并停止本机等待后重试':'保存请求待确认 · 等待GitHub保存并发布收藏'):p.error||(!p.loaded?'正在读取云端…':p.dirty?'有未保存到云端的修改':'已与云端同步');
  $('profile-tabs').hidden=activeView!=='favorites';
  $('profile-tabs').innerHTML=CollectionCore.users.map(uid=>`<button data-peek="${uid}" class="chip ${(viewedProfile||activeProfile)===uid?'selected':''}">${uid} 的收藏${uid===activeProfile?' · 我':''}</button>`).join('')+(isPeerView()?'<span class="peer-note">正在查看对方收藏 · 只读</span>':'');
  if(activeView==='favorites'){$('catalog-heading').textContent=(viewedProfile||activeProfile||'未选择用户')+' · '+(folder||'全部收藏');$('catalog-description').textContent=isPeerView()?'可查看对方的五类收藏；编辑和保存只针对当前选择的用户。':'修改先保存在本机，点击“保存到云端”并在GitHub确认后同步其他设备。';}
 }
-async function getCloud(uid){
- const url=`https://api.github.com/repos/Tengfei2002/VGTrace/contents/collections/${uid}.json?ref=collections&t=${Date.now()}`;
- const response=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(20000),headers:{Accept:'application/vnd.github+json'}});
- if(!response.ok)throw Error(response.status===403||response.status===429?'GitHub读取额度暂时受限，请稍后重试':response.status===404?'云端收藏文件暂不可用；本机修改已保留':'云端读取失败，请检查网络后重试');
- const record=await response.json();if(!/^[0-9a-f]{40}$/.test(record.sha))throw Error('云端返回格式无效');let content=record.content;if(record.encoding!=='base64'){const large=await fetch('https://api.github.com/repos/Tengfei2002/VGTrace/git/blobs/'+record.sha,{signal:AbortSignal.timeout(20000)});if(!large.ok)throw Error('无法读取云端收藏文件');const blob=await large.json();if(blob.encoding!=='base64')throw Error('云端返回格式无效');content=blob.content;}
- const bytes=Uint8Array.from(atob(content.replace(/\s/g,'')),c=>c.charCodeAt(0));const backup=JSON.parse(new TextDecoder().decode(bytes));CollectionCore.parseBackup(backup);if(backup.version!==2||typeof backup.date!=='string'||!Number.isFinite(Date.parse(backup.date)))throw Error('云端备份版本或日期无效');return {backup,sha:record.sha};
-}
+const cloudReader=globalThis.VGTraceCloud.create({fetch:(...args)=>fetch(...args),url:location.protocol==='file:'?'https://tengfei2002.github.io/VGTrace/cloud-collections.json':'./cloud-collections.json'});
+async function getCloud(uid,force=false){return cloudReader.read(uid,{force});}
 const cloudReadTokens={};
 async function readProfile(uid,manual=false){
- const token=cloudReadTokens[uid]=(cloudReadTokens[uid]||0)+1;const p=profiles[uid];try{const remote=await getCloud(uid);if(cloudReadTokens[uid]!==token)return;p.remote=remote.backup.collections;
+ const token=cloudReadTokens[uid]=(cloudReadTokens[uid]||0)+1;const p=profiles[uid];try{const remote=await getCloud(uid,manual||!!p.pending);if(cloudReadTokens[uid]!==token)return;p.remote=remote.backup.collections;
   if(manual&&p.dirty&&!p.pending&&remote.sha!==p.sha){const merge=CollectionCore.merge(p.base,p.collections,remote.backup.collections);if(merge.conflicts.length){p.error='收藏存在冲突，请先选择保留版本';pendingConflict={uid,remote,merge};profileRefresh();$('conflict-text').textContent=`${merge.conflicts.length} 款游戏在本机和云端都有不同修改。选择保留哪边的冲突项；其他不冲突修改会合并。合并前会自动保留本机快照。`;$('conflict-dialog').showModal();return;}p.collections=merge.collections;p.base=remote.backup.collections;p.sha=remote.sha;p.dirty=!CollectionCore.same(p.collections,p.base);p.loaded=true;p.error='';}
   else {const result=CollectionCore.reconcile(p,remote.backup,remote.sha);if(result.saved){toast(uid+' 云端保存已确认');if(pendingSwitch&&uid===activeProfile){const target=pendingSwitch;pendingSwitch=null;if(!p.dirty)await chooseProfile(target);else toast('保存请求之后还有新修改，请处理后再切换。');}}}
   storeProfile(uid);
@@ -53,7 +48,7 @@ function openSaveDialog(){
  let body='```vgtrace-sync\n'+JSON.stringify(request)+'\n```';let url='https://github.com/Tengfei2002/VGTrace/issues/new?title='+encodeURIComponent('VGTrace 收藏同步 · '+uid+' · '+p.pending.requestId)+'&body='+encodeURIComponent(body);
  const attachment=url.length>7000;
  if(attachment){body='```vgtrace-sync\n'+JSON.stringify({...request,backup:undefined,attachment:true})+'\n```\n\n请将刚下载的收藏JSON拖入这里，等待附件上传完成，然后提交。';url='https://github.com/Tengfei2002/VGTrace/issues/new?title='+encodeURIComponent('VGTrace 收藏同步 · '+uid+' · '+p.pending.requestId)+'&body='+encodeURIComponent(body);}
- $('save-request-text').textContent=attachment?'收藏较多：先下载下方原格式JSON，在GitHub确认页拖入该文件后提交。':'在GitHub确认页点击“Submit new issue／Create”后，Actions会保存。只有收到云端结果才会标为已同步。';
+ $('save-request-text').textContent=attachment?'收藏较多：先下载下方原格式JSON，在GitHub确认页拖入该文件后提交。':'在GitHub确认页点击“Submit new issue／Create”后，Actions会保存并发布收藏，可能需要约一分钟。只有读到发布结果才会标为已同步。';
  $('save-request-open').href=url;$('save-request-download').hidden=!attachment;$('save-request-download').onclick=()=>download(`VGTrace_${uid}_收藏备份.json`,JSON.stringify(p.pending.backup,null,2),'application/json');
  $('save-request-dialog').showModal();
 }

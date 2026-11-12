@@ -19,3 +19,10 @@ jobs:
           script: |
             const save = require('./.github/scripts/save-collections.cjs');
             await save({github, context, core});
+  publish:
+    needs: save
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-pages.yml

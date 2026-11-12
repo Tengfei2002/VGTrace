@@ -17,3 +17,5 @@ assert.ok(html.includes('直接维护 VGTrace 仓库'));assert.ok(!html.includes
 const client=fs.readFileSync('src/client.js','utf8');assert.ok(!client.includes('请同时提供当前HTML文件'));assert.ok(client.includes('VGTrace 的 GitHub 仓库继续维护'));
 assert.ok(client.includes("box.value")&&client.includes("$('maintenance-prompt').value"));
 console.log('Passed: count, deduplication, source coverage, 201 adult profiles, all chunks, branding, JavaScript syntax, original collection keys and self-contained offline data.');
+
+const snapshot=JSON.parse(fs.readFileSync('dist/cloud-collections.json','utf8'));assert.equal(snapshot.version,1);for(const uid of ['0731','0425']){assert.match(snapshot.profiles[uid].sha,/^[0-9a-f]{40}$/);assert.equal(snapshot.profiles[uid].backup.version,2);}assert.ok(!fs.readFileSync('dist/client.js','utf8').includes('api.github.com'));console.log('Passed: published collection snapshots and no browser GitHub REST calls.');

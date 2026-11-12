@@ -17,7 +17,7 @@ async function execute({github,context,core}){
   if(current.data.sha!==r.baseSha)throw Error('云端版本已变化，本次没有覆盖。请回网站读取云端、合并或选择保留版本后重新保存');
   const payload=C.backup(collections,value.date);
   const result=await github.rest.repos.createOrUpdateFileContents({owner,repo,path,branch:ref,sha:current.data.sha,message:`Save ${r.userId} collections (${r.requestId})`,content:Buffer.from(JSON.stringify(payload,null,2)+'\n').toString('base64')});
-  await github.rest.issues.createComment({owner,repo,issue_number,body:`已保存 **${r.userId}** 的 ${Object.keys(collections).length} 条收藏。其他用户文件未修改。\n\n提交：${result.data.commit.html_url}\n\n返回 VGTrace 点击“读取云端”或等待自动确认。`});
+  await github.rest.issues.createComment({owner,repo,issue_number,body:`已保存 **${r.userId}** 的 ${Object.keys(collections).length} 条收藏。其他用户文件未修改。\n\n提交：${result.data.commit.html_url}\n\n正在发布网站收藏快照，完成后返回 VGTrace 点击“读取云端”或等待自动确认。`});
   await github.rest.issues.update({owner,repo,issue_number,state:'closed',state_reason:'completed'});
  }catch(error){await github.rest.issues.createComment({owner,repo,issue_number,body:`本次未确认保存完成：${String(error.message).slice(0,700)}。\n\n本机备份请保留。修正后更新本Issue，或从网站重新发起。`});core.setFailed(error.message);}
 }
