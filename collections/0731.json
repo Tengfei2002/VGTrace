@@ -1,10 +1,18 @@
 {
   "version": 2,
-  "date": "2026-11-12T08:21:21.727Z",
+  "date": "2026-11-12T08:22:02.544Z",
   "collections": {
-    "moonlighter": "正在游玩"
+    "moonlighter": "正在游玩",
+    "stardewvalley": "计划中",
+    "ashorthike": "计划中",
+    "balatro": "计划中",
+    "vampiresurvivors": "计划中"
   },
   "keys": [
-    "moonlighter"
+    "moonlighter",
+    "stardewvalley",
+    "ashorthike",
+    "balatro",
+    "vampiresurvivors"
   ]
 }
