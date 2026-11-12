@@ -1,10 +1,12 @@
 {
   "version": 2,
-  "date": "2026-11-12T06:03:00.285Z",
+  "date": "2026-11-12T06:04:20.878Z",
   "collections": {
-    "moonlighter": "正在游玩"
+    "moonlighter": "正在游玩",
+    "stardewvalley": "正在游玩"
   },
   "keys": [
-    "moonlighter"
+    "moonlighter",
+    "stardewvalley"
   ]
 }
