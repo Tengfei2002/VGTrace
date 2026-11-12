@@ -6,7 +6,7 @@ module.exports=async function({github,context,core}){
  for(const issue of pending){
   // Retry user-submitted requests with current code; one malformed request must
   // not prevent other users' valid saves from being written and published.
-  await save({github,context:{...context,issue:{...context.issue,number:issue.number}},core:{setFailed:message=>core.warning('Issue #'+issue.number+': '+message)}});
+  await save({github,context:{repo:context.repo,issue:{number:issue.number}},core:{setFailed:message=>core.warning('Issue #'+issue.number+': '+message)}});
  }
  core.info('已处理 '+pending.length+' 条待保存请求；具体结果见各请求反馈。');
 };

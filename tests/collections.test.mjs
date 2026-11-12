@@ -68,7 +68,7 @@ test('atomic update collisions retry with the new SHA, and persistent failure ne
  const bad=fixture();bad.args.github.rest.repos.createOrUpdateFileContents=async()=>{throw Object.assign(Error('busy'),{status:409});};await save(bad.args);assert.equal(bad.calls.closed.length,0);assert.equal(bad.calls.failures.length,1);assert.equal(bad.calls.reads.length,3);
 });
 test('repair queue retries only authorized user requests, in submission order',async()=>{
- const processQueue=require('../.github/scripts/process-collection-queue.cjs');const f=fixture(),numbers=[],logs=[];
+ const processQueue=require('../.github/scripts/process-collection-queue.cjs');const f=fixture(),numbers=[],logs=[];f.args.context=Object.create({get repo(){return {owner:'Tengfei2002',repo:'VGTrace'};},get issue(){return {number:0};}});
  const issue=n=>({...f.issue,number:n});const other={...issue(4),user:{login:'outsider'},author_association:'NONE'};
  f.args.github.paginate=async()=>[issue(6),other,issue(5)];f.args.github.rest.issues.listForRepo=async()=>{};f.args.github.rest.issues.get=async x=>{numbers.push(x.issue_number);return {data:issue(x.issue_number)};};f.args.core={warning:x=>logs.push(x),info:x=>logs.push(x)};
  await processQueue(f.args);assert.deepEqual(numbers,[5,6]);assert.equal(f.calls.closed.length,2);assert.equal(f.calls.writes.length,2);
