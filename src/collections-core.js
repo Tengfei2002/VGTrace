@@ -12,7 +12,7 @@
  function reconcile(p,remote,sha){const value=parseBackup(remote);const saved=p.pending&&p.pending.backup.date===remote.date&&same(p.pending.backup.collections,value);if(saved){p.sha=sha;p.base=value;p.pending=null;p.dirty=!same(p.collections,value);p.error='';}
   else if(!p.dirty&&!p.pending){p.collections=value;p.base=value;p.sha=sha;p.dirty=false;p.error='';}
   else if(!p.sha&&p.dirty&&!p.pending){const m=merge(p.base,p.collections,value);if(!m.conflicts.length){p.collections=m.collections;p.base=value;p.sha=sha;p.dirty=!same(p.collections,value);p.error='';}else p.error='本机原有收藏与云端有冲突；请点击读取云端处理。';}
-  else if(p.sha!==sha){p.error='云端有新版本，本机修改已保留；请读取云端并处理冲突后再保存。';}
+  else if(p.sha!==sha){p.error='云端有新版本，本机修改已保留；保存会直接替换当前用户，也可读取云端合并。';}
   else p.error='';
   p.loaded=true;return {saved,conflict:!!p.error};
  }

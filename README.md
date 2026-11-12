@@ -26,9 +26,9 @@ A searchable multi-platform video game atlas with curated recommendations, playt
 ### 存储与防覆盖
 
 - 云端唯一数据位置为 **collections 分支**的 `collections/0731.json` 和 `collections/0425.json`；main 中同名空文件仅作初始结构示例，不代表最新收藏。每次保存只改当前用户文件，Git 提交历史保留旧版本。保存成功后复用 `.github/workflows/deploy-pages.yml` 网站发布流程，更新供浏览器读取的静态快照。
-- `.github/workflows/save-collections.yml` 接收 Issue 事件，由 `.github/scripts/save-collections.cjs` 验证作者、用户、数据格式及文件 SHA 后更新。需要默认分支保留此工作流，以及仓库允许 Actions 运行；工作流显式申请 contents／issues 写权限，不需要新增 Secret。
+- `.github/workflows/save-collections.yml` 接收 Issue 事件，由 `.github/scripts/save-collections.cjs` 验证作者、用户和数据格式后自动更新，无需人工审查。用户提交的收藏会完整替换所选用户的云端文件，客户端旧SHA不再阻止保存；最后处理的有效保存生效。需要默认分支保留此工作流，以及仓库允许 Actions 运行；工作流显式申请 contents／issues 写权限，不需要新增 Secret。
 - 页面读取同一 GitHub Pages 站点的 `cloud-collections.json`，无需登录，不调用 GitHub REST API。安卓 Chrome、Edge 等现代浏览器可直接使用，无需安装 Git 或填写令牌。两位用户共用一次文件读取；自动读取缓存20秒，并合并同时发出的请求。手动读取与保存结果检查会获取新快照。网络失败保留本机修改，并短暂冷却；若静态站点返回429，会遵守 Retry-After。未确认发布不会显示“已同步”。
-- 云端版本有变化时保留本机草稿，手动读取会合并互不冲突的修改；同一游戏状态冲突时由用户选择。云端写入也校验原 SHA，防止旧设备直接覆盖新版本。
+- 云端版本有变化时保留本机草稿，手动读取会合并互不冲突的修改；同一游戏状态冲突时由用户选择。点击保存时按所选用户直接替换，Git提交历史保留旧文件；后端使用当时最新SHA进行原子写入，遇到并发冲突自动重试，不要求用户审查或处理旧版本。
 - 旧本机键 `next-game-atlas-favorites-v1`、`next-game-atlas-collections-v2` 不覆盖。首次读取时留原始快照 `vgtrace-legacy-snapshot-v1`，经确认只导入一个用户。导入或处理冲突前另留本机快照；这些快照仍依赖该浏览器存储，应另下载 JSON 备份。
 - 两套缓存分别使用 `vgtrace-profile-0731-v1`、`vgtrace-profile-0425-v1`。已发起但未确认的保存请求也保留在各自缓存；停止本机等待不会撤销已在 GitHub 提交的 Issue。
 
@@ -67,7 +67,7 @@ npm test
 
 修改游戏资料后同步 manifest、meta 统计和相应来源日期，运行构建与检查，再提交并推送 main。发布检查必须对应本次提交，不将仅生成本地文件视为线上更新。
 
-主分支发布与收藏保存共用 `deploy-pages.yml`，统一读取最新main和collections并串行部署。日常图鉴维护不得重建、重置或强推 collections 分支；不要用 main 的初始空文件覆盖实际收藏。首次启用仅在该分支不存在时创建；后续收藏交给保存工作流维护。
+保存脚本更新或手动运行 Save collections 时，会自动重试尚未完成的授权保存请求并发布快照，重复请求按相同内容处理，不要求重新提交。主分支发布与收藏保存共用 `deploy-pages.yml`，统一读取最新main和collections并串行部署。日常图鉴维护不得重建、重置或强推 collections 分支；不要用 main 的初始空文件覆盖实际收藏。首次启用仅在该分支不存在时创建；后续收藏交给保存工作流维护。
 
 ## 免费复用
 

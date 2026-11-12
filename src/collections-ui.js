@@ -40,15 +40,14 @@ async function requestSave(){
  if(!activeProfile){chooseDialog();return false;}const uid=activeProfile,p=profiles[uid];
  if(p.pending){openSaveDialog();return true;}
  if(!p.loaded||!p.sha){await readProfile(uid,true);if(!p.loaded||!p.sha){toast('请先成功读取云端版本；本机收藏不会丢失。');return false;}}
- if(p.error){toast('请先点击“读取云端”处理版本或网络问题。');return false;}
- const backup=CollectionCore.backup(p.collections),requestId=crypto.randomUUID();p.pending={backup,requestId,baseSha:p.sha};storeProfile(uid);openSaveDialog();profileRefresh();return true;
+ const backup=CollectionCore.backup(p.collections),requestId=crypto.randomUUID();p.error='';p.pending={backup,requestId,baseSha:p.sha};storeProfile(uid);openSaveDialog();profileRefresh();return true;
 }
 function openSaveDialog(){
  const uid=activeProfile,p=profiles[uid],request={version:1,userId:uid,requestId:p.pending.requestId,baseSha:p.pending.baseSha,backup:p.pending.backup};
  let body='```vgtrace-sync\n'+JSON.stringify(request)+'\n```';let url='https://github.com/Tengfei2002/VGTrace/issues/new?title='+encodeURIComponent('VGTrace 收藏同步 · '+uid+' · '+p.pending.requestId)+'&body='+encodeURIComponent(body);
  const attachment=url.length>7000;
  if(attachment){body='```vgtrace-sync\n'+JSON.stringify({...request,backup:undefined,attachment:true})+'\n```\n\n请将刚下载的收藏JSON拖入这里，等待附件上传完成，然后提交。';url='https://github.com/Tengfei2002/VGTrace/issues/new?title='+encodeURIComponent('VGTrace 收藏同步 · '+uid+' · '+p.pending.requestId)+'&body='+encodeURIComponent(body);}
- $('save-request-text').textContent=attachment?'收藏较多：先下载下方原格式JSON，在GitHub确认页拖入该文件后提交。':'在GitHub确认页点击“Submit new issue／Create”后，Actions会保存并发布收藏，可能需要约一分钟。只有读到发布结果才会标为已同步。';
+ $('save-request-text').textContent='本次提交将直接替换用户 '+uid+' 的云端收藏，自动保存，无需人工审查。'+(attachment?'收藏较多：先下载下方原格式JSON，在GitHub确认页拖入该文件后提交。':'在GitHub确认页点击“Submit new issue／Create”后，Actions会保存并发布收藏，可能需要约一分钟。只有读到发布结果才会标为已同步。');
  $('save-request-open').href=url;$('save-request-download').hidden=!attachment;$('save-request-download').onclick=()=>download(`VGTrace_${uid}_收藏备份.json`,JSON.stringify(p.pending.backup,null,2),'application/json');
  $('save-request-dialog').showModal();
 }

@@ -43,9 +43,9 @@ test('Actions rereads the issue, writes only the selected user on collections, a
 test('Actions supports the second user without changing the first user',async()=>{
  const f=fixture({userId:'0425'});await save(f.args);assert.equal(f.calls.writes[0].path,'collections/0425.json');
 });
-test('Actions rejects unauthorized authors, invalid fields and stale revisions before writing',async()=>{
- for(const mode of ['outsider','bad-user','bad-status','bad-date','stale']){
-  const f=fixture();if(mode==='outsider'){f.issue.user.login='outsider';f.issue.author_association='NONE';}if(mode==='bad-user')f.request.userId='../main';if(mode==='bad-status')f.request.backup.collections.a='wrong';if(mode==='bad-date')f.request.backup.date='invalid';if(mode==='stale')f.current.sha=newSha;
+test('Actions rejects unauthorized authors and invalid fields before writing',async()=>{
+ for(const mode of ['outsider','bad-user','bad-status','bad-date']){
+  const f=fixture();if(mode==='outsider'){f.issue.user.login='outsider';f.issue.author_association='NONE';}if(mode==='bad-user')f.request.userId='../main';if(mode==='bad-status')f.request.backup.collections.a='wrong';if(mode==='bad-date')f.request.backup.date='invalid';
   f.issue.body='```vgtrace-sync\n'+JSON.stringify(f.request)+'\n```';await save(f.args);assert.equal(f.calls.writes.length,0,mode);assert.equal(f.calls.failures.length,1,mode);
  }
 });
@@ -57,4 +57,19 @@ test('Actions fetches and validates original-format JSON attachments',async()=>{
  const f=fixture({attachment:true,backup:undefined});f.issue.body+='\n[backup.json](https://github.com/user-attachments/files/123456/backup.json)';
  const original=globalThis.fetch;globalThis.fetch=async()=>new Response(JSON.stringify(C.backup({game:'计划中'},'2026-11-12T04:00:00Z')));
  try{await save(f.args);assert.equal(f.calls.failures.length,0);assert.equal(f.calls.writes.length,1);}finally{globalThis.fetch=original;}
+});
+
+test('explicit save replaces an older cloud revision using the actual current SHA',async()=>{
+ const f=fixture();f.current.sha=newSha;await save(f.args);assert.equal(f.calls.failures.length,0);assert.equal(f.calls.writes.length,1);assert.equal(f.calls.writes[0].sha,newSha);assert.equal(f.calls.writes[0].path,'collections/0731.json');
+});
+test('atomic update collisions retry with the new SHA, and persistent failure never closes the request',async()=>{
+ const f=fixture();let attempts=0;const write=f.args.github.rest.repos.createOrUpdateFileContents;
+ f.args.github.rest.repos.createOrUpdateFileContents=async x=>{if(++attempts===1){f.current.sha=newSha;throw Object.assign(Error('conflict'),{status:409});}return write(x);};await save(f.args);assert.equal(attempts,2);assert.equal(f.calls.failures.length,0);assert.equal(f.calls.writes[0].sha,newSha);
+ const bad=fixture();bad.args.github.rest.repos.createOrUpdateFileContents=async()=>{throw Object.assign(Error('busy'),{status:409});};await save(bad.args);assert.equal(bad.calls.closed.length,0);assert.equal(bad.calls.failures.length,1);assert.equal(bad.calls.reads.length,3);
+});
+test('repair queue retries only authorized user requests, in submission order',async()=>{
+ const processQueue=require('../.github/scripts/process-collection-queue.cjs');const f=fixture(),numbers=[],logs=[];
+ const issue=n=>({...f.issue,number:n});const other={...issue(4),user:{login:'outsider'},author_association:'NONE'};
+ f.args.github.paginate=async()=>[issue(6),other,issue(5)];f.args.github.rest.issues.listForRepo=async()=>{};f.args.github.rest.issues.get=async x=>{numbers.push(x.issue_number);return {data:issue(x.issue_number)};};f.args.core={warning:x=>logs.push(x),info:x=>logs.push(x)};
+ await processQueue(f.args);assert.deepEqual(numbers,[5,6]);assert.equal(f.calls.closed.length,2);assert.equal(f.calls.writes.length,2);
 });

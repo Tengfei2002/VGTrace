@@ -1,24 +1,34 @@
 name: Save collections
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/save-collections.cjs'
+      - '.github/scripts/process-collection-queue.cjs'
+      - '.github/workflows/save-collections.yml'
+  workflow_dispatch:
   issues:
     types: [opened, edited, reopened]
 permissions:
   contents: write
   issues: write
 concurrency:
-  group: vgtrace-collections-${{ github.event.issue.number }}
+  group: vgtrace-collections-${{ github.event.issue.number || 'repair' }}
   cancel-in-progress: false
 jobs:
   save:
-    if: startsWith(github.event.issue.title, 'VGTrace 收藏同步 · ')
+    if: github.event_name != 'issues' || startsWith(github.event.issue.title, 'VGTrace 收藏同步 · ')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: actions/github-script@v8
         with:
           script: |
-            const save = require('./.github/scripts/save-collections.cjs');
-            await save({github, context, core});
+            if (context.payload.issue) {
+              await require('./.github/scripts/save-collections.cjs')({github, context, core});
+            } else {
+              await require('./.github/scripts/process-collection-queue.cjs')({github, context, core});
+            }
   publish:
     needs: save
     permissions:
